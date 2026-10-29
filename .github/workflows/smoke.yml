@@ -1,0 +1,49 @@
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t fnmusic-bridge:smoke .
+      - name: Run with empty data
+        run: |
+          docker run -d --name fnmusic-smoke \
+            -e BRIDGE_ADMIN_PASSWORD=SmokeTest-Only-123 \
+            -e BRIDGE_TASKS_ENABLE=0 \
+            -e COMMENTHUB_ENABLE=0 \
+            -e MUSIC_PROXY_ENABLE=0 \
+            -e FNMUSIC_API=http://127.0.0.1:9/music/api/v1 \
+            -e FNMUSIC_DB_DIR=/nonexistent \
+            -e FNMUSIC_SOCKET=/nonexistent/trim_music.socket \
+            -p 18602:8600 fnmusic-bridge:smoke
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18602/api/status >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          docker logs fnmusic-smoke
+          exit 1
+      - name: Check page and login
+        run: |
+          curl -fsS http://127.0.0.1:18602/ | grep -qi '<html'
+          curl -fsS -c cookies -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"SmokeTest-Only-123"}' \
+            http://127.0.0.1:18602/api/login | python3 -c 'import json,sys; assert json.load(sys.stdin)["ok"] is True'
+          curl -fsS -b cookies http://127.0.0.1:18602/api/session | python3 -c 'import json,sys; assert json.load(sys.stdin)["authenticated"] is True'
+      - name: Logs on failure
+        if: failure()
+        run: docker logs fnmusic-smoke || true
+      - name: Cleanup
+        if: always()
+        run: docker rm -f fnmusic-smoke || true
