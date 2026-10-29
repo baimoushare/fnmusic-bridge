@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>commenthub 面板调试台</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+         background:#0f0f12; color:#e8e8ea; }
+  header { padding:14px 18px; border-bottom:1px solid #26262a; }
+  h1 { font-size:15px; margin:0 0 6px; }
+  p  { margin:4px 0; font-size:12px; color:#8b8b93; line-height:1.7; }
+  code { background:#222226; padding:2px 6px; border-radius:4px; font-size:11px; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .btns a, .btns button { background:#26262a; color:#d8d8dc; border:1px solid #33333a; border-radius:7px;
+         padding:6px 11px; font-size:12px; cursor:pointer; text-decoration:none; }
+  .btns a:hover, .btns button:hover { background:#33333a; }
+  /* 模拟飞牛音乐的主内容区（会被内嵌面板挤压） */
+  #appRoot { display:flex; flex-direction:column; min-height:calc(100vh - 150px);
+             transition:padding-right .18s ease; }
+  .content { flex:1; padding:24px; }
+  .lyric { font-size:15px; line-height:2.1; color:#c9c9d1; }
+  .lyric b { color:#fff; }
+  .card { background:#1a1a1e; border:1px solid #26262a; border-radius:10px; padding:16px; max-width:520px; }
+  .muted { color:#6f6f78; font-size:12px; }
+  /* 模拟底部播放条（判定“播放器在场”就靠它） */
+  .playerBar { position:fixed; left:0; right:0; bottom:0; height:76px; background:#16161a;
+               border-top:1px solid #2a2a2e; display:flex; align-items:center; gap:14px; padding:0 20px;
+               transition:right .18s ease; }
+  .cover { width:48px; height:48px; border-radius:8px; background:linear-gradient(135deg,#3a3a46,#22222a); }
+  .meta { flex:1; min-width:0; }
+  .meta .t { font-size:13px; font-weight:600; }
+  .meta .a { font-size:11px; color:#8b8b93; margin-top:2px; }
+  .ctrl { font-size:18px; color:#c9c9d1; letter-spacing:6px; }
+  #status { margin-top:10px; font-size:12px; }
+  .ok { color:#67c23a; } .bad { color:#e6492a; } .warn { color:#e6a23c; }
+</style>
+</head>
+<body>
+<header>
+  <h1>commenthub 面板调试台</h1>
+  <p>这个页面模拟飞牛音乐的界面结构（一个主内容区 + 一个固定底部播放条），用来单独验证评论面板本身，
+     不用来回刷飞牛。面板脚本会被真实注入，行为和线上完全一致。</p>
+  <p>注意：内嵌模式下，面板**只在「播放详情区」打开时出现**。点下面的按钮试试。</p>
+  <p>切换：<code>?fnc=inline</code> 或 <code>?fnc=drawer</code>　·　
+     指定服务：<code>&amp;fncApi=http://<NAS_IP>:8770</code>　·　
+     全部加载：<code>&amp;fncLimit=0</code></p>
+  <div class="btns">
+    <a href="?fnc=drawer">浮层模式</a>
+    <a href="?fnc=inline">内嵌模式</a>
+    <button id="toggleDetail">打开 / 收起播放详情区</button>
+    <button id="togglePlayer">隐藏 / 显示播放条</button>
+    <a href="?fnc=inline&fncLimit=0">内嵌 + 全部加载</a>
+  </div>
+  <div id="status">正在检测评论服务…</div>
+</header>
+
+<div id="appRoot">
+  <div class="content">
+    <div class="card">
+      <div class="muted">模拟歌词区</div>
+      <div class="lyric" style="margin-top:10px">
+        这晚以后音讯隔绝<br>
+        人如天上的明月<br>
+        是不可拥有<br>
+        情如曲过只遗留<br>
+        <b>无可挽救再分别</b><br>
+        为何只是失望
+      </div>
+    </div>
+    <p class="muted" style="margin-top:18px">下面这块就是「App 根节点」—— 内嵌模式下会被面板挤窄。</p>
+  </div>
+</div>
+
+<!-- 模拟飞牛的「右侧播放详情区」：右贴边、近满高。面板的让位判据就靠它 -->
+<div id="detailPane" style="position:fixed;top:0;right:0;bottom:0;width:46%;background:#121215;
+     border-left:1px solid #26262a;display:none;padding:28px 30px;overflow:auto">
+  <div style="font-size:22px;font-weight:600" id="detailTitle">月半小夜曲</div>
+  <div style="color:#8b8b93;font-size:13px;margin-top:6px">李克勤 · 怀旧经典 90年代金曲 Vol.2</div>
+  <div style="margin-top:26px;font-size:15px;line-height:2.2;color:#c9c9d1">
+    仍然倚在失眠夜 望天边星宿<br>仍然听见小提琴 如泣似诉再挑逗<br>
+    <b style="color:#fff">为何只剩一弯月 留在我的天空</b><br>这晚以后音讯隔绝<br>
+    人如天上的明月 是不可拥有
+  </div>
+</div>
+
+<div class="playerBar" id="playerBar">
+  <div class="cover"></div>
+  <div class="meta">
+    <div class="t" id="trackTitle">月半小夜曲</div>
+    <div class="a">李克勤 · 怀旧经典 90年代金曲 Vol.2</div>
+  </div>
+  <div class="ctrl">⏮ ⏸ ⏭</div>
+</div>
+
+<script>
+// 调试台里也要拦截这些请求，让面板能认出"当前播放的曲目"
+// 这里直接返回一首库里真实存在、且评论已抓好的曲目
+(function () {
+  var TRACK = { guid: 'a95a90528bb04d3a9519c48310104ab8', title: '9420',
+                artists: [{ name: '麦小兜' }], duration: 210000 };
+  var realFetch = window.fetch;
+  window.fetch = function (url, opts) {
+    var u = String(url);
+    if (u.indexOf('play-history/list') >= 0) {
+      return Promise.resolve(new Response(JSON.stringify({ code: 0, data: { list: [TRACK] } }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    }
+    return realFetch.apply(this, arguments);
+  };
+})();
+</script>
+
+<!-- 真实的面板脚本（由 commenthub 服务托管同一个文件，保证线上/调试台一致） -->
+<script src="/panel.js"></script>
+
+<script>
+(function () {
+  var el = document.getElementById('status');
+  function set(t, cls) { el.className = cls || ''; el.innerHTML = t; }
+  fetch('/api/health').then(function (r) { return r.json(); }).then(function (j) {
+    set('评论服务：<span class="ok">正常</span> · ' + (j.service || '') + ' v' + (j.version || '') +
+        ' · 指纹 ' + (j.sig || '-'), 'ok');
+  }).catch(function (e) {
+    set('评论服务不可用：' + e.message, 'bad');
+  });
+  document.getElementById('toggleDetail').addEventListener('click', function () {
+    var d = document.getElementById('detailPane');
+    d.style.display = d.style.display === 'block' ? 'none' : 'block';
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 60);
+  });
+  document.getElementById('togglePlayer').addEventListener('click', function () {
+    var b = document.getElementById('playerBar');
+    b.style.display = b.style.display === 'none' ? 'flex' : 'none';
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 50);
+  });
+})();
+</script>
+</body>
+</html>

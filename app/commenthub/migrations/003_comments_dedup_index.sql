@@ -1,0 +1,27 @@
+-- ============================================================================
+-- 003：评论去重统计的覆盖索引（P7-b 追加）
+-- ============================================================================
+-- 为什么需要（**实测**，不是猜）：
+--   `/api/v2/stats` 的去重统计要在 (track_guid, content_hash_v2) 上分组。
+--   没有覆盖索引时 SQLite 会挑 idx_cmt_track(track_guid, likes DESC) 来扫，
+--   然后为**每一行**回表取 content_hash_v2，再建临时 B 树：
+--
+--     查询计划 = SCAN comments USING INDEX idx_cmt_track
+--                + USE TEMP B-TREE FOR GROUP BY
+--     全量库（182,733 条评论）实测 **147s**（另一次 353s，取决于页缓存）
+--
+--   加上 (track_guid, content_hash_v2, source) 覆盖索引之后：
+--
+--     查询计划 = SCAN comments USING COVERING INDEX idx_cmt_track_hash2_src
+--     同一份数据 **0.10s**；建索引本身 0.9s；库 +12MB（104 → 116MB）
+--
+--   同一个索引同时服务两条统计：
+--     · 同曲内重复（GROUP BY track_guid, content_hash_v2）
+--     · 跨平台同内容组（… HAVING COUNT(DISTINCT source)>1）
+--
+-- 说明：本文件**只加索引、不改数据契约**，因此**不动 user_version** ——
+--   user_version 标记的是 v2 数据契约（见 001/002 与 D-13），
+--   迁移进度以 `schema_migrations` 表为准。
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_cmt_track_hash2_src
+    ON comments(track_guid, content_hash_v2, source);

@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+#  fnmusic_bridge —— 直接使用预构建镜像（fnOS amd64）
+#
+#  1) 复制 .env.example 为 .env，并设置 BRIDGE_ADMIN_PASSWORD
+#  2) docker compose pull && docker compose up -d
+#  3) 打开 http://<NAS_IP>:8600
+#
+#  本文件只拉镜像，不在 NAS 上编译。
+# ---------------------------------------------------------------------------
+services:
+  fnmusic_bridge:
+    image: ${FNMUSIC_IMAGE:-ghcr.io/baimoushare/fnmusic-bridge:1.24.1}
+    container_name: fnmusic_bridge
+    restart: unless-stopped
+
+    ports:
+      - "${FNMUSIC_PORT:-8600}:8600"
+
+    environment:
+      FNMUSIC_HOME: /data
+      TZ: ${TZ:-Asia/Shanghai}
+      PYTHONDONTWRITEBYTECODE: "1"
+      FNMUSIC_SOCKET: /run/trim_music.socket
+      FNMUSIC_DB_DIR: /fndb
+      COMMENTHUB_DB: /data/commenthub.db
+      COMMENTHUB_TOKEN_FILE: /data/.commenthub_token
+      MUSIC_UPSTREAM: host.docker.internal:5666
+      BRIDGE_DB: /data/bridge.db
+      BRIDGE_BACKUP_KEEP: "7"
+      BRIDGE_ADMIN_PASSWORD: ${BRIDGE_ADMIN_PASSWORD:?请先在 .env 设置 BRIDGE_ADMIN_PASSWORD}
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      - "${FNMUSIC_DATA_DIR:-./data}:/data"
+      - "${FNMUSIC_SOCKET_PATH:-/run/trim_music.socket}:/run/trim_music.socket"
+      - "${FNMUSIC_FNDB_DIR:-/usr/local/apps/@appdata/trim.music/db}:/fndb:ro"
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

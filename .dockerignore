@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+backups/
+.git/
+.gitignore
+compose.yaml
+README.md
+DEPLOY.md
+CHANGELOG.md
+install.sh
+upgrade.sh
