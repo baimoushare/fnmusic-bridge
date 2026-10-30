@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="fnmusic_bridge">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#111C33"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="156" fill="none" stroke="#22D3EE" stroke-width="14" opacity="0.35"/>
+  <path d="M104 318 Q256 176 408 318" fill="none" stroke="url(#arc)" stroke-width="24" stroke-linecap="round"/>
+  <path d="M140 356 Q256 246 372 356" fill="none" stroke="#34D399" stroke-width="12" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="196" cy="330" r="28" fill="#F8FAFC"/>
+  <circle cx="330" cy="300" r="28" fill="#F8FAFC"/>
+  <rect x="216" y="204" width="20" height="128" rx="10" fill="#F8FAFC"/>
+  <rect x="350" y="174" width="20" height="128" rx="10" fill="#F8FAFC"/>
+  <path d="M216 204 L370 174" stroke="#F8FAFC" stroke-width="20" stroke-linecap="round"/>
+</svg>

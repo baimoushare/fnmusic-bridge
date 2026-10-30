@@ -1,5 +1,13 @@
 # fnmusic_bridge
 
+<p align="center">
+  <img src="logo.svg" width="120" height="120" alt="fnmusic_bridge logo">
+</p>
+
+<p align="center">
+  把网易云 / QQ音乐 / 酷狗 / 酷我的歌单，用飞牛 NAS 本地曲库重建到飞牛音乐，并把评论聚合到播放页。
+</p>
+
 把 **网易云 / QQ音乐 / 酷狗 / 酷我** 的歌单，用飞牛 NAS 本地曲库里已有的歌，重建到 **飞牛音乐（fnOS）**，并把网易云、QQ音乐的评论聚合到播放页。
 
 只面向 **飞牛 fnOS + 已安装飞牛音乐**，镜像已验证 `linux/amd64`。
