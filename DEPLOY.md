@@ -4,7 +4,7 @@
 
 - fnOS 已安装 Docker，当前用户能执行 `docker info`
 - fnOS 已安装并登录「飞牛音乐」
-- 能访问 `ghcr.io`（拉取镜像）
+- 能访问 Docker Hub 或 `ghcr.io`（拉取镜像）
 - 一个空闲端口，默认 8600
 
 ## 二、三步部署
@@ -32,7 +32,7 @@ docker compose up -d
 | `BRIDGE_ADMIN_PASSWORD` | 必填 | 管理员密码，至少 8 位 |
 | `FNMUSIC_SOCKET_PATH` | `/run/trim_music.socket` | 飞牛音乐 API socket |
 | `FNMUSIC_FNDB_DIR` | `/usr/local/apps/@appdata/trim.music/db` | 只读挂载，用于自动读取 token |
-| `FNMUSIC_IMAGE` | `ghcr.io/baimoushare/fnmusic-bridge:1.24.1` | 镜像版本 |
+| `FNMUSIC_IMAGE` | `laobaiart/fnmusic-bridge:1.24.1` | 镜像版本 |
 
 密码含 `$` 时请用单引号包住，避免被 Compose 展开。
 
@@ -61,7 +61,7 @@ docker compose up -d
 ## 六、常见问题
 
 **镜像拉取失败**
-确认能访问 `ghcr.io`；国内网络可能需要代理或镜像加速。
+确认能访问 Docker Hub 或 GHCR；国内网络可能需要代理或镜像加速。
 
 **找不到飞牛音乐 socket**
 先安装并登录「飞牛音乐」；确实要用其它接入方式时，可跳过预检并在页面手动填访问令牌。

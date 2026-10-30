@@ -108,3 +108,14 @@ jobs:
             PIP_INDEX_URL=https://pypi.org/simple
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Alias major.minor tags
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+        run: |
+          ver="${VERSION_INPUT:-${GITHUB_REF_NAME#v}}"
+          minor="${ver%.*}"
+          docker buildx imagetools create -t "docker.io/${DOCKERHUB_USERNAME}/fnmusic-bridge:${minor}" "docker.io/${DOCKERHUB_USERNAME}/fnmusic-bridge:${ver}"
+          docker buildx imagetools create -t "ghcr.io/${GITHUB_REPOSITORY_OWNER}/fnmusic-bridge:${minor}" "ghcr.io/${GITHUB_REPOSITORY_OWNER}/fnmusic-bridge:${ver}"

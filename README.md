@@ -21,8 +21,15 @@ docker compose up -d
 也可以直接使用镜像：
 
 ```bash
-docker pull ghcr.io/baimoushare/fnmusic-bridge:1.24.1
+docker pull laobaiart/fnmusic-bridge:1.24.1
 ```
+
+## 镜像地址
+
+- Docker Hub（推荐）：`laobaiart/fnmusic-bridge:1.24.1`
+- GHCR 备用：`ghcr.io/baimoushare/fnmusic-bridge:1.24.1`
+
+两个仓库内容一致，均提供 `1.24.1`、`1.24`、`latest` 标签。
 
 ## 前置条件
 
@@ -39,7 +46,7 @@ docker pull ghcr.io/baimoushare/fnmusic-bridge:1.24.1
 | `FNMUSIC_PORT` | `8600` | 对外端口 |
 | `FNMUSIC_DATA_DIR` | `./data` | 配置、缓存、备份、SQLite |
 | `BRIDGE_ADMIN_PASSWORD` | 必填 | 管理员密码，至少 8 位 |
-| `FNMUSIC_IMAGE` | `ghcr.io/baimoushare/fnmusic-bridge:1.24.1` | 镜像版本 |
+| `FNMUSIC_IMAGE` | `laobaiart/fnmusic-bridge:1.24.1` | 镜像版本 |
 
 ## 升级与回滚
 
