@@ -1,7 +1,8 @@
 # fnmusic_bridge
 
 <p align="center">
-  <img src="logo.svg" width="120" height="120" alt="fnmusic_bridge logo">
+  <img src="logo.svg" width="96" height="96" alt="fnmusic_bridge logo"
+       style="background:#0B1220;border-radius:22px;padding:12px">
 </p>
 
 <p align="center">
