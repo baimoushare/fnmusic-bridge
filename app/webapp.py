@@ -2046,7 +2046,10 @@ BACKUP_PLAN = "backup"
 # --------------------------------------------------------------- 音乐代理（P4）
 # 承接原 commenthub-web(nginx) 的职责：把飞牛音乐代理出来，只在 /music/ 注入面板。
 # 上游**固定**在这里，绝不接受请求方指定 —— 否则就变成开放代理了。
-MUSIC_UPSTREAM = os.environ.get("MUSIC_UPSTREAM", "host.docker.internal:5666")
+# 默认走容器里挂载的 unix socket：不依赖 host.docker.internal，也不用写死 IP，
+# 换机器/换网络都能直接用。需要时可用 MUSIC_UPSTREAM 覆盖成 host:port。
+MUSIC_UPSTREAM = os.environ.get(
+    "MUSIC_UPSTREAM", f"unix:{os.environ.get('FNMUSIC_SOCKET', '/run/trim_music.socket')}")
 MUSIC_PROXY_ENABLE = os.environ.get("MUSIC_PROXY_ENABLE", "1") != "0"
 MUSIC = {"proxy": None}
 
@@ -2056,9 +2059,38 @@ def start_music_proxy():
         _br_log("音乐代理已按配置关闭（MUSIC_PROXY_ENABLE=0）")
         return
     try:
-        probe = music_proxy.MusicProxy(MUSIC_UPSTREAM, logger=_br_log)
-        if not probe.upstream_ok():
-            raise ValueError(f"上游地址不合法：{MUSIC_UPSTREAM!r}")
+        # 默认走 socket；socket 不存在时回退到 host.docker.internal，
+        # 两者都不行就明确记一条日志，而不是等到请求时才 502。
+        # 顺序：环境变量给的 → socket → host.docker.internal → 本机回环
+        sock = f"unix:{os.environ.get('FNMUSIC_SOCKET', '/run/trim_music.socket')}"
+        candidates = []
+        for cand in (MUSIC_UPSTREAM, sock, "host.docker.internal:5666", "127.0.0.1:5666"):
+            if cand and cand not in candidates:
+                candidates.append(cand)
+        probe = None
+        for cand in candidates:
+            cand_probe = music_proxy.MusicProxy(cand, logger=_br_log)
+            if not cand_probe.upstream_ok():
+                continue
+            # 真连一次（探一个轻量路径），连不上就换下一个；
+            # 否则只会在用户点「音乐播放」时才暴露 502。
+            try:
+                status, _headers, body = cand_probe.prepare("GET", "/", {})
+                try:
+                    for _ in body:          # 立刻读掉，避免占着上游连接
+                        break
+                except Exception:           # noqa: BLE001
+                    pass
+                if status >= 500:
+                    _br_log("音乐代理候选返回 %s：%s", status, cand)
+                    continue
+            except Exception as exc:                       # noqa: BLE001
+                _br_log("音乐代理候选不可用：%s（%s）", cand, type(exc).__name__)
+                continue
+            probe = cand_probe
+            break
+        if probe is None:
+            raise ValueError(f"没有可用的上游（试过 {candidates}）")
         MUSIC["proxy"] = probe
         _br_log("音乐代理就绪：上游 %s（/music/ 注入评论面板）", probe.upstream_label())
     except Exception as exc:                               # noqa: BLE001

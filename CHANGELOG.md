@@ -1,5 +1,11 @@
 # 更新记录
 
+## 1.24.3 — 2026-10-30
+
+- 音乐页代理默认改走容器内挂载的 unix socket，不再依赖 `host.docker.internal` 或固定 IP。
+- 启动时依次探测候选上游（环境变量 → socket → host.docker.internal → 127.0.0.1），连不上就换下一个，避免用户点「音乐播放」时才看到 502。
+- `MUSIC_UPSTREAM` 配错也会自动回退到 socket。
+
 ## 1.24.2 — 2026-10-30
 
 - 任务列表不再返回几百 KB 的 result，`/api/tasks` 从 8.4 MB 降到约 18 KB。

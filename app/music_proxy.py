@@ -41,6 +41,24 @@ RECOMPUTE = {"host", "accept-encoding", "origin", "referer"}
 CHUNK = 64 * 1024
 
 
+class _UnixHTTPConnection(http.client.HTTPConnection):
+    """把 HTTP 连接挂到 unix socket 上（飞牛音乐的 API 只监听 socket）。"""
+
+    def __init__(self, path, timeout=30.0):
+        super().__init__("localhost", timeout=timeout)
+        self._unix_path = path
+
+    def connect(self):
+        import socket as _socket
+        if not hasattr(_socket, "AF_UNIX"):
+            # Windows 等平台没有 AF_UNIX；容器是 Linux，正常不会走到这里。
+            raise OSError("当前平台不支持 unix socket")
+        sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+        sock.settimeout(self.timeout)
+        sock.connect(self._unix_path)
+        self.sock = sock
+
+
 class MusicProxy:
     """流式反向代理 + 面板注入。"""
 
@@ -50,20 +68,32 @@ class MusicProxy:
                   目标永远固定，绝不由请求方决定）
         """
         raw = str(upstream or "").strip()
-        if "://" in raw:
-            raw = raw.split("://", 1)[1]
-        raw = raw.rstrip("/")
-        if "/" in raw:
-            raw = raw.split("/", 1)[0]
-        self.host, _, port = raw.partition(":")
-        self.port = int(port) if port.isdigit() else 80
+        # unix socket 形态：unix:/path/to.sock 或 /path/to.sock
+        # 飞牛音乐的 API 本来就监听在 socket 上，容器里挂载 socket 就不必
+        # 依赖 host.docker.internal 或写死 IP，换机器/换网络都能直接用。
+        if raw.startswith("unix:"):
+            raw = raw[5:]
+        if raw.startswith("/"):
+            self.socket_path = raw
+            self.host, self.port = "", 80
+        else:
+            self.socket_path = None
+            if "://" in raw:
+                raw = raw.split("://", 1)[1]
+            raw = raw.rstrip("/")
+            if "/" in raw:
+                raw = raw.split("/", 1)[0]
+            self.host, _, port = raw.partition(":")
+            self.port = int(port) if port.isdigit() else 80
         self.logger = logger or (lambda *a, **k: None)
         self.connect_timeout = connect_timeout
 
     def upstream_ok(self):
-        return bool(self.host)
+        return bool(self.socket_path or self.host)
 
     def upstream_label(self):
+        if self.socket_path:
+            return f"unix:{self.socket_path}"
         return f"{self.host}:{self.port}"
 
     # ------------------------------------------------------------------ 校验
@@ -160,10 +190,14 @@ class MusicProxy:
 
     # ------------------------------------------------------------ 请求上游
     def open_upstream(self, method, path, headers, body=None):
-        conn = http.client.HTTPConnection(self.host, self.port,
-                                          timeout=self.connect_timeout)
+        if self.socket_path:
+            conn = _UnixHTTPConnection(self.socket_path, timeout=self.connect_timeout)
+            host_header = "localhost"
+        else:
+            conn = http.client.HTTPConnection(self.host, self.port,
+                                              timeout=self.connect_timeout)
+            host_header = self.host if self.port == 80 else f"{self.host}:{self.port}"
         forward = dict(headers)
-        host_header = self.host if self.port == 80 else f"{self.host}:{self.port}"
         forward["Host"] = host_header
         # 飞牛会校验 Origin/Referer：代理后浏览器 Origin 是本站，与上游预期不符，
         # 统一改写成上游自己（与 nginx 的做法一致）。

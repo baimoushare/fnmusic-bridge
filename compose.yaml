@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------------
 services:
   fnmusic_bridge:
-    image: ${FNMUSIC_IMAGE:-laobaiart/fnmusic-bridge:1.24.2}
+    image: ${FNMUSIC_IMAGE:-laobaiart/fnmusic-bridge:1.24.3}
     container_name: fnmusic_bridge
     restart: unless-stopped
 
@@ -24,7 +24,8 @@ services:
       FNMUSIC_DB_DIR: /fndb
       COMMENTHUB_DB: /data/commenthub.db
       COMMENTHUB_TOKEN_FILE: /data/.commenthub_token
-      MUSIC_UPSTREAM: host.docker.internal:5666
+      # 默认走 socket，不依赖 host.docker.internal 或固定 IP
+      MUSIC_UPSTREAM: ${FNMUSIC_MUSIC_UPSTREAM:-unix:/run/trim_music.socket}
       BRIDGE_DB: /data/bridge.db
       BRIDGE_BACKUP_KEEP: "7"
       BRIDGE_ADMIN_PASSWORD: ${BRIDGE_ADMIN_PASSWORD:?请先在 .env 设置 BRIDGE_ADMIN_PASSWORD}

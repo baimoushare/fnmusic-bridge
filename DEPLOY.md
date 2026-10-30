@@ -32,7 +32,7 @@ docker compose up -d
 | `BRIDGE_ADMIN_PASSWORD` | 必填 | 管理员密码，至少 8 位 |
 | `FNMUSIC_SOCKET_PATH` | `/run/trim_music.socket` | 飞牛音乐 API socket |
 | `FNMUSIC_FNDB_DIR` | `/usr/local/apps/@appdata/trim.music/db` | 只读挂载，用于自动读取 token |
-| `FNMUSIC_IMAGE` | `laobaiart/fnmusic-bridge:1.24.2` | 镜像版本 |
+| `FNMUSIC_IMAGE` | `laobaiart/fnmusic-bridge:1.24.3` | 镜像版本 |
 
 密码含 `$` 时请用单引号包住，避免被 Compose 展开。
 
