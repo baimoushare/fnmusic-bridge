@@ -22,6 +22,23 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
+      # 双仓库发布必须同时具备这两个 Secret；缺失时直接报错，禁止静默跳过。
+      - name: Validate Docker Hub secrets
+        shell: bash
+        run: |
+          missing=0
+          if [[ -z "$DOCKERHUB_USERNAME" ]]; then
+            echo "::error::Missing repository secret: DOCKERHUB_USERNAME"
+            missing=1
+          fi
+          if [[ -z "$DOCKERHUB_TOKEN" ]]; then
+            echo "::error::Missing repository secret: DOCKERHUB_TOKEN"
+            missing=1
+          fi
+          if [[ "$missing" -ne 0 ]]; then
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
