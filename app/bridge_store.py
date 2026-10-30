@@ -394,18 +394,23 @@ class BridgeStore:
 
     # ------------------------------------------------------------------ 查询
     @staticmethod
-    def _decorate(row, *, with_log=False, log=None):
+    def _decorate(row, *, with_log=False, log=None, with_result=True):
         d = dict(row)
         try:
             d["args"] = json.loads(d.pop("args_json") or "[]")
         except (ValueError, TypeError):
             d["args"] = []
         raw = d.pop("result_json", None)
-        try:
-            d["result"] = json.loads(raw) if raw else None
-        except (ValueError, TypeError):
-            d["result"] = None
-        d["cancel_requested"] = bool(d["cancel_requested"])
+        d["cancel_requested"] = bool(d.get("cancel_requested"))
+        if with_result:
+            try:
+                d["result"] = json.loads(raw) if raw else None
+            except (ValueError, TypeError):
+                d["result"] = None
+        else:
+            # 列表接口不解析 result：单个评论任务的结果可以有几百 KB，
+            # 30 条就是 8 MB，而前端只在展开诊断时才需要它。
+            d["has_result"] = bool(raw)
         if with_log:
             d["log"] = log or ""
         return d
@@ -418,15 +423,24 @@ class BridgeStore:
         log = self.task_log(task_id) if with_log else None
         return self._decorate(row, with_log=with_log, log=log)
 
-    def list_tasks(self, limit=50, status=None):
+    def list_tasks(self, limit=50, status=None, *, with_result=True, kind=None):
+        """最近的任务列表。列表接口用 ``with_result=False``，避免把几百 KB 的
+        结果一起反序列化/传输；单任务详情（``get``）仍然带 result。"""
         def work(db):
+            sql = "SELECT * FROM tasks"
+            where, params = [], []
             if status:
-                return db.execute(
-                    "SELECT * FROM tasks WHERE status=? ORDER BY created_at DESC LIMIT ?",
-                    (status, limit)).fetchall()
-            return db.execute(
-                "SELECT * FROM tasks ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
-        return [self._decorate(r) for r in self._read(work)]
+                where.append("status=?")
+                params.append(status)
+            if kind:
+                where.append("kind=?")
+                params.append(kind)
+            if where:
+                sql += " WHERE " + " AND ".join(where)
+            sql += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            return db.execute(sql, params).fetchall()
+        return [self._decorate(r, with_result=with_result) for r in self._read(work)]
 
     def stats(self):
         def work(db):

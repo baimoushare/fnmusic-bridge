@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------------
 services:
   fnmusic_bridge:
-    image: ${FNMUSIC_IMAGE:-laobaiart/fnmusic-bridge:1.24.1}
+    image: ${FNMUSIC_IMAGE:-laobaiart/fnmusic-bridge:1.24.2}
     container_name: fnmusic_bridge
     restart: unless-stopped
 

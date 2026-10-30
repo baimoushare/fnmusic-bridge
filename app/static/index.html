@@ -72,7 +72,8 @@ body{margin:0;color:var(--ink);background-color:var(--bg);
       border-right:1px solid var(--edge);
       backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur)}
 .brand{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;font-size:17px;font-weight:700;padding:0 8px 22px}
-.brand-copy{min-width:0}
+.brand-copy{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.instance-badge{display:inline-block;padding:1px 6px;border-radius:6px;background:#f59e0b;color:#1a1206;font-size:11px;font-weight:800;letter-spacing:.5px;line-height:1.5}
  .brand small{display:block;color:var(--side-ink2);font-size:11px;font-weight:400;margin-top:4px}
 .brand-mark{display:none;width:34px;height:34px;place-items:center;border:1px solid var(--edge);border-radius:10px;color:var(--blue);font-size:13px;font-weight:800;letter-spacing:-.5px;flex:none}
 .side-icon-btn{width:32px;height:32px;display:grid;place-items:center;flex:none;padding:0;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--side-ink);cursor:pointer;transition:.15s}
@@ -143,18 +144,19 @@ body{margin:0;color:var(--ink);background-color:var(--bg);
 #theme-tg.theme-fab:hover{background:transparent;border-color:transparent;color:var(--blue)}
 #theme-tg.theme-fab svg{width:19px;height:19px}
 .sidebar-modern .nav button:hover{background:transparent;border-color:var(--edge);color:var(--side-on-ink);box-shadow:none}
-.sidebar-modern .nav button.on{background:transparent;border-color:var(--blue);color:var(--side-on-ink);box-shadow:0 0 0 1px color-mix(in srgb,var(--blue) 12%,transparent) inset}
 .sidebar-modern .nav .music-entry{display:flex;align-items:center;gap:11px;width:100%;min-height:42px;margin-top:2px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--blue) 68%,transparent);border-radius:8px;background:transparent;color:var(--blue);font-size:14px;font-weight:650;text-decoration:none}
 .sidebar-modern .nav .music-entry:hover{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,transparent)}
 .sidebar-modern .nav button svg,.sidebar-modern .nav .music-entry svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .sidebar-modern .nav button[data-page="merge"] svg,.sidebar-modern .nav button[data-page="comments"] svg{width:20px;height:20px;stroke-width:9}
-.sidebar-modern .side-foot{margin-top:0;display:flex;justify-content:stretch;padding-top:0;border-top:1px solid var(--edge)}
-.sidebar-modern .side-foot .theme-tg{position:absolute;right:10px;bottom:82px}
-.sidebar-modern .side-foot .sidebar-toggle-bottom{position:static;width:100%;height:32px;border:0;border-radius:0;background:transparent;box-shadow:none;color:var(--side-ink);transform:none}
-.sidebar-modern .side-foot .sidebar-toggle-bottom:hover{background:transparent;border-color:transparent;color:var(--blue)}
-.sidebar-modern .side-foot .sidebar-toggle-bottom svg{transform:rotate(0deg)}
-.app.side-collapsed .sidebar-modern .side-foot .sidebar-toggle-bottom svg{transform:rotate(180deg)}
-.sidebar-modern .side-foot .theme-tg{right:10px;bottom:82px}
+/* 折叠手柄：挂在侧栏右边框的垂直中点上（原来在侧栏最底部）。
+   侧栏是 sticky + 100vh，所以 fixed + top:50% 正好是侧栏的垂直中点；
+   left 取侧栏宽度（210 / 收起后 68），再左移半个身位，让一半压在边框上。 */
+.sidebar-collapse-tab{position:fixed;left:210px;top:50%;transform:translate(-50%,-50%);z-index:95;width:22px;height:44px;padding:0;display:grid;place-items:center;border:1px solid transparent;border-left:0;border-radius:0 9px 9px 0;background:transparent;color:var(--blue);cursor:pointer;box-shadow:none;transition:.15s}
+.sidebar-collapse-tab:hover{background:transparent;border-color:var(--edge);color:var(--blue)}
+.sidebar-collapse-tab:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.sidebar-collapse-tab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.app.side-collapsed .sidebar-collapse-tab{left:68px}
+.app.side-collapsed .sidebar-collapse-tab svg{transform:rotate(180deg)}
 .sidebar-modern .theme-tg{width:34px;height:34px;margin:0;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--side-ink);backdrop-filter:none;-webkit-backdrop-filter:none}
 .sidebar-modern .theme-tg:hover{border-color:var(--edge);background:transparent;color:var(--side-on-ink)}
 .sidebar-modern .theme-tg svg{width:18px;height:18px}
@@ -254,17 +256,20 @@ table.map th{color:var(--muted);font-size:12px;font-weight:600}
   /* .card backdrop-filter creates a stacking context: lift this card, not only its menu. */
   .comment-config{position:relative;z-index:2;overflow:visible}
   .comment-config .comment-controls,.comment-config .comment-plan{overflow:visible}
- .comment-controls{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
-  .comment-controls .comment-param{padding:6px 10px;border:1px solid var(--line);border-radius:8px;flex:0 0 auto;justify-content:flex-start;gap:8px;min-width:0}
+ .comment-controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  /* 参数组只是「标签 + 控件」，不再自己画外框 —— 外框套着里面的控件，
+     一眼看过去全是框（用户 2026-10-30 反馈）。边框只留给控件本身。 */
+  .comment-controls .comment-param{padding:0;border:0;border-radius:0;background:none;flex:0 0 auto;justify-content:flex-start;gap:8px;min-width:0}
   .comment-controls .comment-param input{width:100px}
   /* 手动抓取那一组：三个参数 + 开始抓取，自己排一行；自动抓取那组在右边 */
-  .comment-controls .cm-group-manual{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;min-width:0}
-  /* 参数控件不再自带实心底色和边框 —— 整组只有一个很淡的外框。
-     之前输入框那层 --field 底色比卡片本体还亮，一眼看过去全是框。 */
+  .comment-controls .cm-group-manual{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+  /* 整行统一高度、统一中线：左侧参数组、开始抓取、右侧定时抓取都对到同一条中线上 */
   .comment-controls .comment-param input,.comment-controls .comment-param select,
-  .comment-controls .comment-param .select-dd>.dd-btn{background:transparent;border-color:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
-  .comment-controls .comment-param input:hover,.comment-controls .comment-param .select-dd>.dd-btn:hover{border-color:var(--ctrl)}
-  .comment-controls .comment-param input:focus,.comment-controls .comment-param .select-dd>.dd-btn:focus-visible{border-color:var(--blue)}
+  .comment-controls .comment-param .select-dd>.dd-btn,
+  .comment-plan select,.comment-plan input,.comment-plan .select-dd>.dd-btn{height:36px;min-height:36px;padding-top:0;padding-bottom:0}
+  .comment-controls .comment-actions .btn,.comment-plan .btn{height:36px;padding-top:0;padding-bottom:0;display:inline-flex;align-items:center}
+  .comment-controls .comment-param input:focus,.comment-controls .comment-param select:focus,
+  .comment-controls .comment-param .select-dd>.dd-btn:focus-visible{border-color:var(--blue)}
   .cm-run-stats{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0}.cm-run-stat{display:flex;flex-direction:column;gap:2px;padding:7px 10px;border-left:2px solid var(--edge);flex:1 1 108px;min-width:0}.cm-run-stat span{font-size:12px;color:var(--muted)}.cm-run-stat strong{font-size:16px;font-variant-numeric:tabular-nums}.cm-run-stat.new{border-color:#55c8b0}.cm-run-stat.bad strong{color:#ef8b8b}.cm-run-stat.muted{opacity:.72}.cm-run-song{flex:1 1 200px}.cm-run-song strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cm-platform-summary{margin-top:8px;border-top:1px solid var(--edge);padding-top:7px}.cm-platform-summary summary{cursor:pointer;color:var(--muted);font-size:13px}.cm-platform-summary summary span{float:right;font-variant-numeric:tabular-nums}.cm-platform-scroll{overflow:auto}.cm-platform-summary table{width:100%;border-collapse:collapse;margin-top:7px;font-size:12px}.cm-platform-summary th,.cm-platform-summary td{text-align:right;padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--edge) 65%,transparent);font-variant-numeric:tabular-nums}.cm-platform-summary th:first-child,.cm-platform-summary td:first-child{text-align:left}@media(max-width:600px){.cm-run-stat{flex:1 1 40%} .cm-run-song{flex:1 1 100%} .cm-platform-summary summary span{float:none;margin-left:8px}}
   .tk-diagnostics{padding:5px 0;white-space:normal}.tk-diagnostics summary{cursor:pointer}.tk-diagnostics pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:7px 0}.tk-diagnostics h4{margin:10px 0 4px}
  .comment-controls label,.comment-plan label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}
@@ -820,7 +825,9 @@ body.fullbleed{user-select:none;-webkit-user-select:none}
   .sidebar-modern .brand-copy{font-size:15px}.sidebar-modern .brand-copy small{display:none}
   .sidebar-modern .side-foot{position:relative;right:auto;top:auto;margin-top:0;padding:0;border-top:1px solid var(--edge);justify-content:stretch}
   .sidebar-modern .side-foot .theme-tg{position:absolute;right:42px;bottom:17px}
-  .sidebar-modern .side-foot .sidebar-toggle-bottom{height:32px}
+  /* 窄屏侧栏变成顶部横条，贴着右边框的把手会飘到内容上：改成右上角的小方按钮，排在主题按钮左边 */
+  .sidebar-collapse-tab{left:auto;right:52px;top:13px;transform:none;width:34px;height:34px;border:1px solid var(--edge);border-radius:9px;background:transparent;box-shadow:none}
+  .app.side-collapsed .sidebar-collapse-tab{left:auto;right:52px}
   .app.side-collapsed .sidebar-modern .side-foot{position:relative;right:auto;top:auto;justify-content:stretch}
   .app.side-collapsed .sidebar-modern .side-foot .theme-tg{right:42px;bottom:17px}
   .sidebar-modern .nav{display:flex;overflow-x:auto;gap:4px;padding:2px 0 1px;scrollbar-width:none}
@@ -1104,7 +1111,6 @@ body.fullbleed{user-select:none;-webkit-user-select:none}
 .dash-donut{width:128px;height:128px;flex:none;position:relative;display:grid;place-items:center}
 .dash-donut:before{content:none}
 .dash-donut svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.dash-donut .ring-track{fill:none;stroke:var(--line);stroke-width:10}
 .dash-donut .ring-segment{fill:none;stroke-width:10;stroke-linecap:round}
 .dash-donut-center{z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;max-width:92px;text-align:center}
 .dash-donut-center strong{font-size:17px;line-height:1.1;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;max-width:92px}
@@ -1169,12 +1175,12 @@ body.fullbleed{user-select:none;-webkit-user-select:none}
       </div>
     </div>
   </div>
-  <div class="side-foot">
-    <button type="button" class="side-icon-btn sidebar-toggle-bottom" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="收起侧边栏" title="收起侧边栏" aria-expanded="true">
-      <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
-    </button>
-  </div>
 </aside>
+<!-- 折叠手柄：故意放在 <aside> 外面。侧栏有 backdrop-filter + overflow:hidden，
+     它自己会变成 fixed 子元素的包含块并把超出部分裁掉，挂在边框上的把手只能放在外面。 -->
+<button type="button" class="side-icon-btn sidebar-collapse-tab" id="sidebar-toggle" onclick="toggleSidebar()" aria-label="收起侧边栏" title="收起侧边栏" aria-expanded="true">
+  <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
+</button>
 <button type="button" class="theme-tg theme-fab" id="theme-tg" onclick="toggleTheme()" title="切换到明亮模式" aria-label="切换到明亮模式"><span id="theme-ic" style="display:flex"></span></button>
 <main class="main">
 <div class="content">
@@ -1186,7 +1192,7 @@ body.fullbleed{user-select:none;-webkit-user-select:none}
     <div class="dashboard-column playlist-column">
       <div class="dashboard-column-title"><span>歌单数据</span></div>
       <div class="card dash-card"><h3 title="同一账户所有歌单按歌曲 GUID 去重；不同账户分别统计">账户歌单曲目</h3><div id="dash-account-songs" class="dash-hbars"></div></div>
-      <div class="card dash-card"><div class="dash-card-head"><h3>歌单已有歌曲占比</h3><select id="dash-match-account" onchange="DASH_MATCH_USER=this.value;renderDashboard()"></select></div><div class="hint" style="margin:-8px 0 12px">飞牛歌单已有歌曲数 ÷ 来源登记歌曲数</div><div id="dash-matching" class="dash-match-list"></div></div>
+      <div class="card dash-card"><div class="dash-card-head"><h3>歌单已有歌曲占比</h3><select id="dash-match-account" onchange="DASH_MATCH_USER=this.value;renderDashboard()"></select></div><div id="dash-matching" class="dash-match-list"></div></div>
       <div class="card dash-card"><div class="dash-card-head"><h3>歌单来源</h3><select id="dash-source-account" onchange="DASH_SOURCE_USER=this.value;renderDashboard()"></select></div><div id="dash-playlist-sources" class="dash-donut-row"></div></div>
     </div>
     <div class="dashboard-column comment-column">
@@ -1596,7 +1602,8 @@ function cmRenderKpis(p){
   ].map((k,i)=>`<div class="card dash-kpi kpi-${i}"${k.title?` title="${esc(k.title)}"`:''}><div class="dash-kpi-label">${k.label}</div><strong>${k.value==null||k.value===''?'—':(typeof k.value==='number'?Number(k.value).toLocaleString():k.value)}</strong>${k.sub?`<div class="dash-kpi-sub">${esc(k.sub)}</div>`:''}</div>`).join('');
 }
 async function renderComments(){
-  cmRenderKpis(null);
+  // 有上次的统计就先摆着，接口回来再覆盖 —— 别先把四张卡清成「—」再干等。
+  if (!CM_SAVED_STATS) cmRenderKpis(null);
   const pill = $('#ch-pill');
   try {
     const p = await api('/api/comments/progress');
@@ -1608,7 +1615,7 @@ async function renderComments(){
   initCadenceDays();
   await Promise.all([tkLoad(), cmLoadPlan(), cmLoadProgress()]);
   if (CM_PROGRESS_TIMER) clearInterval(CM_PROGRESS_TIMER);
-  CM_PROGRESS_TIMER = setInterval(() => { if ($('#p-comments').classList.contains('on')) cmLoadProgress(); }, 2000);
+  CM_PROGRESS_TIMER = setInterval(() => { if ($('#p-comments').classList.contains('on')) cmLoadProgress(); }, 5000);
 }
 
 /** 单独算去重统计：全量库上这一步可能几十秒（缺覆盖索引），所以给足超时并明说。 */
@@ -1731,7 +1738,7 @@ function dashDonut(el,items,total,centerLabel,centerValue){
     const gap=clean.length>1?Math.min(4,portion*.45):0;
     return `<circle class="ring-segment" cx="64" cy="64" r="53" pathLength="100" stroke="${esc(x.color||dashColor(x.key))}" stroke-dasharray="${portion-gap} ${100-portion+gap}" stroke-dashoffset="${-start-gap/2}" transform="rotate(-90 64 64)"/>`;
   }).join('');
-  el.innerHTML=`<div class="dash-donut"><svg viewBox="0 0 128 128" aria-hidden="true"><circle class="ring-track" cx="64" cy="64" r="53"/>${segments}</svg><div class="dash-donut-center"><strong>${esc(centerValue==null?Number(total||sum).toLocaleString():centerValue)}</strong><span>${esc(centerLabel||'条')}</span></div></div><div class="dash-legend">${clean.map(x=>{const pct=Number(x.value)*100/sum;return `<div class="dash-legend-row" title="${esc(x.name)}：${Number(x.value).toLocaleString()}（${pct.toFixed(1)}%）"><i style="--legend:${x.color||dashColor(x.key)}"></i><span>${esc(x.name)}</span><b>${Number(x.value).toLocaleString()}</b><small>${pct.toFixed(1)}%</small></div>`;}).join('')}</div>`;
+  el.innerHTML=`<div class="dash-donut"><svg viewBox="0 0 128 128" aria-hidden="true">${segments}</svg><div class="dash-donut-center"><strong>${esc(centerValue==null?Number(total||sum).toLocaleString():centerValue)}</strong><span>${esc(centerLabel||'条')}</span></div></div><div class="dash-legend">${clean.map(x=>{const pct=Number(x.value)*100/sum;return `<div class="dash-legend-row" title="${esc(x.name)}：${Number(x.value).toLocaleString()}（${pct.toFixed(1)}%）"><i style="--legend:${x.color||dashColor(x.key)}"></i><span>${esc(x.name)}</span><b>${Number(x.value).toLocaleString()}</b><small>${pct.toFixed(1)}%</small></div>`;}).join('')}</div>`;
 }
 function dashAccountSelect(id,rows,current){
   const sel=$('#'+id);if(!sel)return '';
@@ -2984,9 +2991,12 @@ async function tkLoad(){
       '<td>' + (['queued','running'].includes(st)
         ? '<button class="btn sm ghost" onclick="tkCancelId(\'' + t.id + '\')">取消</button>' : '—') + '</td></tr>';
     if (t.kind === 'comment_refresh') {
-      const result = {...(TK_DIAGNOSTICS.get(t.id) || {}),...(t.result || {})};
-      TK_DIAGNOSTICS.set(t.id,result);
-      html += `<tr class="tk-diagnostics-row"><td colspan="5"><details class="tk-diagnostics" data-task-id="${esc(t.id)}" ontoggle="tkLoadCommentDiagnostics(this)"><summary>本任务错误与平台诊断</summary><div class="tk-diagnostics-content">${tkRenderCommentDiagnostics(result)}</div></details></td></tr>`;
+      // 诊断数据一条就上百 KB：**展开时**再用 /api/tasks/{id} 去取。
+      // 以前在这里直接 tkRenderCommentDiagnostics()，一次进页面就要把十几条
+      // 任务的诊断（约 17 MB 文本）全部 pretty-print 进 DOM，哪怕 <details> 是收起的。
+      const cached = TK_DIAGNOSTICS.get(t.id);
+      if (cached) TK_DIAGNOSTICS.set(t.id,{...(t.result||{}),...cached});
+      html += `<tr class="tk-diagnostics-row"><td colspan="5"><details class="tk-diagnostics" data-task-id="${esc(t.id)}" ontoggle="tkLoadCommentDiagnostics(this)"><summary>本任务错误与平台诊断</summary><div class="tk-diagnostics-content"><div class="hint">展开后加载…</div></div></details></td></tr>`;
     }
   });
   html += '</tbody></table>';

@@ -10,6 +10,7 @@ import concurrent.futures
 import hashlib
 import json
 import os
+import html as html_lib
 import re
 import secrets
 import sqlite3
@@ -2305,12 +2306,18 @@ def submit_task(kind, args, *, resource=None):
 
 @app.get("/api/tasks")
 def api_tasks(limit: int = 50, status: str | None = None):
-    """任务列表 + 队列统计 + 冷却状态。默认不带日志正文（列表要轻）。"""
+    """任务列表 + 队列统计 + 冷却状态。
+
+    列表**不解析、不返回** ``result``：单个评论抓取任务的结果里带着
+    platform_issues/matching_diagnostics，几百 KB 一条；30 条就是 8 MB，
+    页面一进来就得先下载再解析。要看诊断用 ``/api/tasks/{id}``。
+    """
     if not bridge_ready():
         return JSONResponse({"error": "任务系统未启用", "reason": BRIDGE["reason"],
                              "detail": BRIDGE["error"]}, status_code=503)
     store = BRIDGE["store"]
-    return {"tasks": store.list_tasks(limit=max(1, min(200, limit)), status=status),
+    return {"tasks": store.list_tasks(limit=max(1, min(200, limit)), status=status,
+                                      with_result=False),
             "stats": store.stats(),
             "cooldowns": store.list_cooldowns(),
             "current": BRIDGE["manager"].cancel_info(),
@@ -2582,16 +2589,29 @@ def _live_comment_coverage():
     return COVERAGE_SNAPSHOT.read()
 
 
+def _comment_run_task(store):
+    """进度卡只需要「最近一条全库评论抓取任务」。
+
+    以前这里用 ``list_tasks(limit=200)`` 再在 Python 里筛，等于每 2 秒把
+    库里所有任务的结果 JSON（实测约 9 MB）重新反序列化一遍，只为挑出一条。
+    现在先用一次不解析 result 的轻查询定位，再取那一条的详情。
+    """
+    brief = [t for t in store.list_tasks(limit=50, kind="comment_refresh", with_result=False)
+             if (t.get("args") or {}).get("full_library")
+             and not (t.get("args") or {}).get("dry_run")]
+    if not brief:
+        return None
+    pick = next((t for t in brief if t.get("status") in ("running", "queued")), brief[0])
+    return store.get(pick["id"])
+
+
 @app.get("/api/comments/progress")
 def api_comments_progress():
     """Real comment coverage: distinct live FnOS songs with at least one stored comment."""
     run_progress = None
     if bridge_ready():
         store = BRIDGE["store"]
-        candidates = [t for t in store.list_tasks(limit=200)
-                      if t.get("kind") == "comment_refresh" and (t.get("args") or {}).get("full_library") and not (t.get("args") or {}).get("dry_run")]
-        task = next((t for t in candidates if t.get("status") in ("running", "queued")),
-                    candidates[0] if candidates else None)
+        task = _comment_run_task(store)
         if task:
             history = (task.get("result") or {}).get("progress") or []
             if history:
@@ -2616,7 +2636,8 @@ def api_comments_progress():
                     run_progress[key] = task["result"][key]
     coverage = _live_comment_coverage()
     freshness = {key:coverage.get(key) for key in
-                 ("generated_at", "revision", "refreshing", "stale", "last_error")}
+                 ("generated_at", "revision", "refreshing", "stale", "last_error",
+                  "build_seconds")}
     # 评论库磁盘占用与库本身是否可统计无关：统计不可用时卡片照样要有数字。
     storage = comment_storage()
     if not coverage.get("available"):
@@ -3191,7 +3212,16 @@ async def commenthub_gateway(rest: str, request: Request):
 @app.get("/", response_class=HTMLResponse)
 def index():
     # 必须禁缓存：否则改完前端，浏览器还在跑旧的那份 JS
-    return HTMLResponse((STATIC / "index.html").read_text(encoding="utf-8"),
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    # 测试实例标识：设置 FNMUSIC_INSTANCE_LABEL=test 时，在标题名字后面显示 TEST 角标。
+    # 正式容器不设置该变量，页面与原来完全一致。
+    label = (os.environ.get("FNMUSIC_INSTANCE_LABEL") or "").strip()
+    if label:
+        badge = ('<span class="instance-badge" title="测试实例">'
+                 + html_lib.escape(label.upper()) + '</span>')
+        html = html.replace('FnMusic Bridge<small>',
+                            'FnMusic Bridge' + badge + '<small>', 1)
+    return HTMLResponse(html,
                         headers={"Cache-Control": "no-store, no-cache, must-revalidate",
                                  "Pragma": "no-cache", "Expires": "0"})
 

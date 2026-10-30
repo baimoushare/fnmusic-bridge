@@ -134,6 +134,19 @@ def _read_sources(fn_db, comment_db):
     return current, old, comments, mappings, sync, known
 
 
+def alias_diff(saved_rows, desired):
+    """算别名表要改哪些行：返回 (要删的 snapshot_guid, 要写的整行)。
+
+    ``desired`` 是 {snapshot_guid: (current_guid, old_fp, current_fp)}。
+    以前每次统计都把整表 DELETE + 重插（生产上 7,700 行，光提交就 ~9.5s、
+    还要 fsync 一轮），而绝大多数时候一行都没变。
+    """
+    have = {row[0]: (row[1], row[2], row[3]) for row in saved_rows}
+    drop = [key for key, value in have.items() if desired.get(key) != value]
+    write = [(key, *value) for key, value in desired.items() if have.get(key) != value]
+    return drop, write
+
+
 def _resolve(current, old, alias_db):
     by_key = {}
     for row in current.values():
@@ -141,6 +154,14 @@ def _resolve(current, old, alias_db):
             by_key.setdefault(_key(row), []).append(row)
     mapped, ambiguous, reused, invalidated = {}, 0, 0, 0
     aliases = None
+    fingerprints = {}
+
+    def fingerprint(kind, row):
+        key = (kind, row.get("guid"))
+        if key not in fingerprints:
+            fingerprints[key] = _fingerprint(row)
+        return fingerprints[key]
+
     try:
         if alias_db is not None:
             aliases = sqlite3.connect(str(alias_db), timeout=3)
@@ -150,8 +171,8 @@ def _resolve(current, old, alias_db):
             saved = aliases.execute("SELECT * FROM comment_guid_aliases").fetchall()
             for old_guid, current_guid, old_fp, current_fp in saved:
                 a, b = old.get(old_guid), current.get(current_guid)
-                if (a and b and _consistent(a, b) and _fingerprint(a) == old_fp
-                        and _fingerprint(b) == current_fp
+                if (a and b and _consistent(a, b) and fingerprint("snapshot", a) == old_fp
+                        and fingerprint("current", b) == current_fp
                         and (old_guid not in current or old_guid == current_guid)):
                     mapped[old_guid] = current_guid
                     reused += 1
@@ -172,11 +193,18 @@ def _resolve(current, old, alias_db):
             elif len(hits) > 1:
                 ambiguous += 1
         if aliases is not None:
-            with aliases:
-                aliases.execute("DELETE FROM comment_guid_aliases")
-                aliases.executemany("INSERT INTO comment_guid_aliases VALUES (?,?,?,?)", [
-                    (a, b, _fingerprint(old[a]), _fingerprint(current[b]))
-                    for a, b in mapped.items()])
+            desired = {a: (b, fingerprint("snapshot", old[a]), fingerprint("current", current[b]))
+                       for a, b in mapped.items()}
+            drop, write = alias_diff(saved, desired)
+            if drop or write:
+                with aliases:
+                    if drop:
+                        aliases.executemany(
+                            "DELETE FROM comment_guid_aliases WHERE snapshot_guid=?",
+                            [(key,) for key in drop])
+                    if write:
+                        aliases.executemany(
+                            "INSERT OR REPLACE INTO comment_guid_aliases VALUES (?,?,?,?)", write)
     finally:
         if aliases is not None:
             aliases.close()
