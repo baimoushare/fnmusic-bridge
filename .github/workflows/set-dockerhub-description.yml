@@ -1,0 +1,22 @@
+name: set-dockerhub-description
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate secrets
+        run: |
+          test -n "$DOCKERHUB_USERNAME" || { echo "::error::missing DOCKERHUB_USERNAME"; exit 1; }
+          test -n "$DOCKERHUB_TOKEN" || { echo "::error::missing DOCKERHUB_TOKEN"; exit 1; }
+      - name: Update description
+        run: bash .github/scripts/set-dockerhub-description.sh
